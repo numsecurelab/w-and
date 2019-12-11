@@ -11,9 +11,9 @@ class TransactionsPresenter(
         private val interactor: TransactionsModule.IInteractor,
         private val router: TransactionsModule.IRouter,
         private val factory: TransactionViewItemFactory,
-        private val loader: TransactionsLoader,
+        private val dataSource: TransactionRecordDataSource,
         private val metadataDataSource: TransactionMetadataDataSource)
-    : TransactionsModule.IViewDelegate, TransactionsModule.IInteractorDelegate, TransactionsLoader.Delegate {
+    : TransactionsModule.IViewDelegate, TransactionsModule.IInteractorDelegate {
 
     var view: TransactionsModule.IView? = null
 
@@ -42,10 +42,10 @@ class TransactionsPresenter(
     }
 
     override val itemsCount: Int
-        get() = loader.itemsCount
+        get() = dataSource.itemsCount
 
     override fun itemForIndex(index: Int): TransactionViewItem {
-        val transactionItem = loader.itemForIndex(index)
+        val transactionItem = dataSource.itemForIndex(index)
         val wallet = transactionItem.wallet
         val lastBlockHeight = metadataDataSource.getLastBlockHeight(wallet)
         val threshold = metadataDataSource.getConfirmationThreshold(wallet)
@@ -59,7 +59,7 @@ class TransactionsPresenter(
     }
 
     override fun onBottomReached() {
-        loader.loadNext()
+        loadNextPage()
     }
 
     override fun onUpdateWalletsData(allWalletsData: List<Triple<Wallet, Int, Int?>>) {
@@ -81,22 +81,43 @@ class TransactionsPresenter(
 
         view?.showFilters(filters)
 
-        loader.handleUpdate(wallets)
-        viewItems.clear()
-        view?.setItems(listOf())
-        loader.loadNext()
+        dataSource.handleUpdatedWallets(wallets)
+
+        resetViewItems()
+        loadNextPage()
     }
 
     override fun onUpdateSelectedWallets(selectedWallets: List<Wallet>) {
-        loader.setWallets(selectedWallets)
-        viewItems.clear()
-        view?.setItems(listOf())
-        loader.loadNext()
+        dataSource.setWallets(selectedWallets)
+
+        resetViewItems()
+        loadNextPage()
     }
 
     override fun didFetchRecords(records: Map<Wallet, List<TransactionRecord>>) {
-        loader.didFetchRecords(records)
+        dataSource.handleNextRecords(records)
+
+        moveToNextPage()
     }
+
+    private fun moveToNextPage() {
+        val currentItemsCount = dataSource.itemsCount
+        val insertedCount = dataSource.increasePage()
+        if (insertedCount > 0) {
+            didInsertData(currentItemsCount, insertedCount)
+        }
+        loading = false
+    }
+
+    private fun didInsertData(fromIndex: Int, count: Int) {
+        val toInsert = List(count) {
+            itemForIndex(fromIndex + it)
+        }
+        viewItems.addAll(toInsert)
+
+        view?.setItems(viewItemsCopy)
+    }
+
 
     override fun onUpdateLastBlockHeight(wallet: Wallet, lastBlockHeight: Int) {
         val oldBlockHeight = metadataDataSource.getLastBlockHeight(wallet)
@@ -109,7 +130,7 @@ class TransactionsPresenter(
             return
         }
 
-        val indexes = loader.itemIndexesForPending(wallet, oldBlockHeight - threshold)
+        val indexes = dataSource.itemIndexesForPending(wallet, oldBlockHeight - threshold)
         if (indexes.isNotEmpty()) {
             indexes.forEach {
                 viewItems[it] = itemForIndex(it)
@@ -128,7 +149,7 @@ class TransactionsPresenter(
     override fun didFetchRate(rateValue: BigDecimal, coin: Coin, currency: Currency, timestamp: Long) {
         metadataDataSource.setRate(rateValue, coin, currency, timestamp)
 
-        val indexes = loader.itemIndexesForTimestamp(coin, timestamp)
+        val indexes = dataSource.itemIndexesForTimestamp(coin, timestamp)
         if (indexes.isNotEmpty()) {
             indexes.forEach {
                 viewItems[it] = itemForIndex(it)
@@ -139,7 +160,7 @@ class TransactionsPresenter(
     }
 
     override fun didUpdateRecords(records: List<TransactionRecord>, wallet: Wallet) {
-        if (loader.didUpdateRecords(records, wallet)) {
+        if (dataSource.handleUpdatedRecords(records, wallet)) {
             resetViewItems()
         }
     }
@@ -153,22 +174,12 @@ class TransactionsPresenter(
         view?.setItems(viewItemsCopy)
     }
 
-    //
-    // TransactionsLoader Delegate
-    //
+    private var loading: Boolean = false
 
+    private fun loadNextPage() {
+        if (loading || dataSource.allShown) return
+        loading = true
 
-    override fun didInsertData(fromIndex: Int, count: Int) {
-        val toInsert = List(count) {
-            itemForIndex(fromIndex + it)
-        }
-        viewItems.addAll(toInsert)
-
-        view?.setItems(viewItemsCopy)
+        interactor.fetchRecords(dataSource.getFetchDataList())
     }
-
-    override fun fetchRecords(fetchDataList: List<TransactionsModule.FetchData>) {
-        interactor.fetchRecords(fetchDataList)
-    }
-
 }
