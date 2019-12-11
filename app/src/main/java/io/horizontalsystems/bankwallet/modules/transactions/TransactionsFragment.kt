@@ -48,7 +48,7 @@ class TransactionsFragment : Fragment(), TransactionsAdapter.Listener, FilterAda
                     layoutManager.scrollToPosition(0)
                 }
             }
-        });
+        })
 
         recyclerTags.adapter = filterAdapter
         recyclerTransactions.setHasFixedSize(true)
@@ -72,36 +72,8 @@ class TransactionsFragment : Fragment(), TransactionsAdapter.Listener, FilterAda
             }
         })
 
-        viewModel.reloadLiveEvent.observe(viewLifecycleOwner, Observer {
-            transactionsAdapter.notifyDataSetChanged()
-
-            if (viewModel.delegate.itemsCount == 0) {
-                viewModel.delegate.onBottomReached()
-            }
-        })
-
-        viewModel.reloadChangeEvent.observe(viewLifecycleOwner, Observer { diff ->
-            diff?.dispatchUpdatesTo(transactionsAdapter)
-
-            if (viewModel.delegate.itemsCount == 0) {
-                viewModel.delegate.onBottomReached()
-            }
-        })
-
-        viewModel.addItemsLiveEvent.observe(viewLifecycleOwner, Observer {
-            it?.let { (fromIndex, count) ->
-                transactionsAdapter.notifyItemRangeInserted(fromIndex, count)
-            }
-        })
-
         viewModel.itemsLiveData.observe(viewLifecycleOwner, Observer {
             transactionsAdapter.setItems(it)
-        })
-
-        viewModel.reloadItemsLiveEvent.observe(viewLifecycleOwner, Observer {
-            it?.forEach { index ->
-                transactionsAdapter.notifyItemChanged(index)
-            }
         })
     }
 
@@ -137,11 +109,11 @@ class TransactionsAdapter(private var listener: Listener) : Adapter<ViewHolder>(
     lateinit var viewModel: TransactionsViewModel
 
     override fun getItemCount(): Int {
-        return if (items.size == 0) 1 else items.size
+        return if (items.isEmpty()) 1 else items.size
     }
 
     override fun getItemViewType(position: Int): Int {
-        return if (items.size == 0) noTransactionsView else transactionView
+        return if (items.isEmpty()) noTransactionsView else transactionView
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -157,11 +129,7 @@ class TransactionsAdapter(private var listener: Listener) : Adapter<ViewHolder>(
         }
 
         if (holder is ViewHolderTransaction) {
-            try {
-                holder.bind(items[position], showBottomShade = (position == itemCount - 1))
-            } catch (e: ArrayIndexOutOfBoundsException) {
-                logger.warning("throwing exception ArrayIndexOutOfBoundsException in TransactionsFragment")
-            }
+            holder.bind(items[position], showBottomShade = (position == itemCount - 1))
         }
     }
 
