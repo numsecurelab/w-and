@@ -1,6 +1,5 @@
 package io.horizontalsystems.bankwallet.modules.transactions
 
-import androidx.recyclerview.widget.DiffUtil
 import io.horizontalsystems.bankwallet.entities.Coin
 import io.horizontalsystems.bankwallet.entities.TransactionItem
 import io.horizontalsystems.bankwallet.entities.TransactionRecord
@@ -47,20 +46,11 @@ class TransactionItemDataSource {
         return indexes
     }
 
-    fun handleModifiedItems(updatedItems: List<TransactionItem>, insertedItems: List<TransactionItem>): DiffUtil.DiffResult {
-        val tmpList = items.toMutableList()
-        tmpList.removeAll(updatedItems)
-        tmpList.addAll(updatedItems)
-        tmpList.addAll(insertedItems)
-        tmpList.sortDescending()
-
-        val diffCallback = TransactionDiffCallback(items.toList(), tmpList)
-        val diffResult = DiffUtil.calculateDiff(diffCallback)
-
-        items.clear()
-        items.addAll(tmpList)
-
-        return diffResult
+    fun handleModifiedItems(updatedItems: List<TransactionItem>, insertedItems: List<TransactionItem>) {
+        items.removeAll(updatedItems)
+        items.addAll(updatedItems)
+        items.addAll(insertedItems)
+        items.sortDescending()
     }
 
     fun shouldInsertRecord(record: TransactionRecord): Boolean {

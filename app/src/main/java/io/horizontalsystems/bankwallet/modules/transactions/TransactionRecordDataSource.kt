@@ -1,6 +1,5 @@
 package io.horizontalsystems.bankwallet.modules.transactions
 
-import androidx.recyclerview.widget.DiffUtil
 import io.horizontalsystems.bankwallet.entities.Coin
 import io.horizontalsystems.bankwallet.entities.TransactionItem
 import io.horizontalsystems.bankwallet.entities.TransactionRecord
@@ -18,11 +17,6 @@ class TransactionRecordDataSource(
 
     val allShown
         get() = poolRepo.activePools.all { it.allShown }
-
-    val allRecords: Map<Wallet, List<TransactionRecord>>
-        get() = poolRepo.activePools.map {
-            Pair(it.wallet, it.records)
-        }.toMap()
 
     fun itemForIndex(index: Int): TransactionItem =
             itemsDataSource.itemForIndex(index)
@@ -44,8 +38,8 @@ class TransactionRecordDataSource(
         }
     }
 
-    fun handleUpdatedRecords(records: List<TransactionRecord>, wallet: Wallet): DiffUtil.DiffResult? {
-        val pool = poolRepo.getPool(wallet) ?: return null
+    fun handleUpdatedRecords(records: List<TransactionRecord>, wallet: Wallet): Boolean {
+        val pool = poolRepo.getPool(wallet) ?: return false
 
         val updatedRecords = mutableListOf<TransactionRecord>()
         val insertedRecords = mutableListOf<TransactionRecord>()
@@ -65,12 +59,14 @@ class TransactionRecordDataSource(
             }
         }
 
-        if (!poolRepo.isPoolActiveByWallet(wallet)) return null
+        if (!poolRepo.isPoolActiveByWallet(wallet)) return false
 
         val updatedItems = updatedRecords.map { factory.createTransactionItem(wallet, it) }
         val insertedItems = insertedRecords.map { factory.createTransactionItem(wallet, it) }
 
-        return itemsDataSource.handleModifiedItems(updatedItems, insertedItems)
+        itemsDataSource.handleModifiedItems(updatedItems, insertedItems)
+
+        return true
     }
 
     fun increasePage(): Int {

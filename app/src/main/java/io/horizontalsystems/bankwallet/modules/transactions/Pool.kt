@@ -42,9 +42,6 @@ class Pool(val state: State) {
 
     }
 
-    val records: MutableList<TransactionRecord>
-        get() = state.records
-
     val allShown: Boolean
         get() = state.allLoaded && state.unusedRecords.isEmpty()
 

@@ -1,6 +1,5 @@
 package io.horizontalsystems.bankwallet.modules.transactions
 
-import androidx.recyclerview.widget.DiffUtil
 import io.horizontalsystems.bankwallet.core.factories.TransactionViewItemFactory
 import io.horizontalsystems.bankwallet.entities.Coin
 import io.horizontalsystems.bankwallet.entities.Currency
@@ -27,8 +26,7 @@ class TransactionsPresenter(
     }
 
     override fun onVisible() {
-        viewItems = MutableList(itemsCount) { itemForIndex(it) }
-        view?.setItems(viewItemsCopy)
+        resetViewItems()
     }
 
     override fun onTransactionItemClick(transaction: TransactionViewItem) {
@@ -61,7 +59,7 @@ class TransactionsPresenter(
     }
 
     override fun onBottomReached() {
-        loader.loadNext(false)
+        loader.loadNext()
     }
 
     override fun onUpdateWalletsData(allWalletsData: List<Triple<Wallet, Int, Int?>>) {
@@ -85,13 +83,15 @@ class TransactionsPresenter(
 
         loader.handleUpdate(wallets)
         viewItems.clear()
-        loader.loadNext(true)
+        view?.setItems(listOf())
+        loader.loadNext()
     }
 
     override fun onUpdateSelectedWallets(selectedWallets: List<Wallet>) {
         loader.setWallets(selectedWallets)
         viewItems.clear()
-        loader.loadNext(true)
+        view?.setItems(listOf())
+        loader.loadNext()
     }
 
     override fun didFetchRecords(records: Map<Wallet, List<TransactionRecord>>) {
@@ -105,8 +105,7 @@ class TransactionsPresenter(
         metadataDataSource.setLastBlockHeight(lastBlockHeight, wallet)
 
         if (oldBlockHeight == null) {
-            viewItems = MutableList(itemsCount) { itemForIndex(it) }
-            view?.setItems(viewItemsCopy)
+            resetViewItems()
             return
         }
 
@@ -123,8 +122,7 @@ class TransactionsPresenter(
     override fun onUpdateBaseCurrency() {
         metadataDataSource.clearRates()
 
-        viewItems = MutableList(itemsCount) { itemForIndex(it) }
-        view?.setItems(viewItemsCopy)
+        resetViewItems()
     }
 
     override fun didFetchRate(rateValue: BigDecimal, coin: Coin, currency: Currency, timestamp: Long) {
@@ -141,10 +139,16 @@ class TransactionsPresenter(
     }
 
     override fun didUpdateRecords(records: List<TransactionRecord>, wallet: Wallet) {
-        loader.didUpdateRecords(records, wallet)
+        if (loader.didUpdateRecords(records, wallet)) {
+            resetViewItems()
+        }
     }
 
     override fun onConnectionRestore() {
+        resetViewItems()
+    }
+
+    private fun resetViewItems() {
         viewItems = MutableList(itemsCount) { itemForIndex(it) }
         view?.setItems(viewItemsCopy)
     }
@@ -153,15 +157,6 @@ class TransactionsPresenter(
     // TransactionsLoader Delegate
     //
 
-    override fun onChange(diff: DiffUtil.DiffResult) {
-        viewItems = MutableList(itemsCount) { itemForIndex(it) }
-        view?.setItems(viewItemsCopy)
-    }
-
-    override fun didChangeData() {
-        viewItems = MutableList(itemsCount) { itemForIndex(it) }
-        view?.setItems(viewItemsCopy)
-    }
 
     override fun didInsertData(fromIndex: Int, count: Int) {
         val toInsert = List(count) {
