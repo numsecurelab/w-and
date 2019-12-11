@@ -21,6 +21,7 @@ class TransactionsViewModel : ViewModel(), TransactionsModule.IView, Transaction
     val reloadLiveEvent = SingleLiveEvent<Unit>()
     val reloadItemsLiveEvent = SingleLiveEvent<List<Int>>()
     val addItemsLiveEvent = SingleLiveEvent<Pair<Int, Int>>()
+    val itemsLiveData = MutableLiveData<List<TransactionViewItem>>()
 
     private var flushSubject = PublishSubject.create<Unit>()
     private var indexesToUpdate = mutableListOf<Int>()
@@ -67,6 +68,10 @@ class TransactionsViewModel : ViewModel(), TransactionsModule.IView, Transaction
         } else {
             addItemsLiveEvent.postValue(Pair(fromIndex, count))
         }
+    }
+
+    override fun setItems(items: List<TransactionViewItem>) {
+        itemsLiveData.postValue(items)
     }
 
     override fun openTransactionInfo(transactionViewItem: TransactionViewItem) {

@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.*
 import io.horizontalsystems.bankwallet.R
@@ -93,6 +94,10 @@ class TransactionsFragment : Fragment(), TransactionsAdapter.Listener, FilterAda
             }
         })
 
+        viewModel.itemsLiveData.observe(viewLifecycleOwner, Observer {
+            transactionsAdapter.setItems(it)
+        })
+
         viewModel.reloadItemsLiveEvent.observe(viewLifecycleOwner, Observer {
             it?.forEach { index ->
                 transactionsAdapter.notifyItemChanged(index)
@@ -123,6 +128,8 @@ class TransactionsAdapter(private var listener: Listener) : Adapter<ViewHolder>(
     private val transactionView = 1
     private val logger = Logger.getLogger("TransactionsAdapter")
 
+    private var items = listOf<TransactionViewItem>()
+
     interface Listener {
         fun onItemClick(item: TransactionViewItem)
     }
@@ -130,11 +137,11 @@ class TransactionsAdapter(private var listener: Listener) : Adapter<ViewHolder>(
     lateinit var viewModel: TransactionsViewModel
 
     override fun getItemCount(): Int {
-        return if (viewModel.delegate.itemsCount == 0) 1 else viewModel.delegate.itemsCount
+        return if (items.size == 0) 1 else items.size
     }
 
     override fun getItemViewType(position: Int): Int {
-        return if (viewModel.delegate.itemsCount == 0) noTransactionsView else transactionView
+        return if (items.size == 0) noTransactionsView else transactionView
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -151,7 +158,7 @@ class TransactionsAdapter(private var listener: Listener) : Adapter<ViewHolder>(
 
         if (holder is ViewHolderTransaction) {
             try {
-                holder.bind(viewModel.delegate.itemForIndex(position), showBottomShade = (position == itemCount - 1))
+                holder.bind(items[position], showBottomShade = (position == itemCount - 1))
             } catch (e: ArrayIndexOutOfBoundsException) {
                 logger.warning("throwing exception ArrayIndexOutOfBoundsException in TransactionsFragment")
             }
@@ -159,7 +166,18 @@ class TransactionsAdapter(private var listener: Listener) : Adapter<ViewHolder>(
     }
 
     override fun onClick(position: Int) {
-        listener.onItemClick(viewModel.delegate.itemForIndex(position))
+        listener.onItemClick(items[position])
+    }
+
+    fun setItems(items: List<TransactionViewItem>) {
+        if (this.items.isEmpty()) {
+            this.items = items
+            notifyDataSetChanged()
+        } else {
+            val diffResult = DiffUtil.calculateDiff(TransactionViewItemDiff(this.items, items))
+            this.items = items
+            diffResult.dispatchUpdatesTo(this)
+        }
     }
 }
 

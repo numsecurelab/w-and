@@ -18,12 +18,17 @@ class TransactionsPresenter(
 
     var view: TransactionsModule.IView? = null
 
+    private var viewItems = mutableListOf<TransactionViewItem>()
+    private val viewItemsCopy: List<TransactionViewItem>
+        get() = viewItems.map { it.copy() }
+
     override fun viewDidLoad() {
         interactor.initialFetch()
     }
 
     override fun onVisible() {
-        view?.reload()
+        viewItems = MutableList(itemsCount) { itemForIndex(it) }
+        view?.setItems(viewItemsCopy)
     }
 
     override fun onTransactionItemClick(transaction: TransactionViewItem) {
@@ -48,9 +53,9 @@ class TransactionsPresenter(
         val threshold = metadataDataSource.getConfirmationThreshold(wallet)
         val rate = metadataDataSource.getRate(wallet.coin, transactionItem.record.timestamp)
 
-        if (rate == null) {
-            interactor.fetchRate(wallet.coin, transactionItem.record.timestamp)
-        }
+//        if (rate == null) {
+//            interactor.fetchRate(wallet.coin, transactionItem.record.timestamp)
+//        }
 
         return factory.item(wallet, transactionItem, lastBlockHeight, threshold, rate)
     }
@@ -79,11 +84,13 @@ class TransactionsPresenter(
         view?.showFilters(filters)
 
         loader.handleUpdate(wallets)
+        viewItems.clear()
         loader.loadNext(true)
     }
 
     override fun onUpdateSelectedWallets(selectedWallets: List<Wallet>) {
         loader.setWallets(selectedWallets)
+        viewItems.clear()
         loader.loadNext(true)
     }
 
@@ -98,27 +105,38 @@ class TransactionsPresenter(
         metadataDataSource.setLastBlockHeight(lastBlockHeight, wallet)
 
         if (oldBlockHeight == null) {
-            view?.reload()
+            viewItems = MutableList(itemsCount) { itemForIndex(it) }
+            view?.setItems(viewItemsCopy)
             return
         }
 
         val indexes = loader.itemIndexesForPending(wallet, oldBlockHeight - threshold)
         if (indexes.isNotEmpty()) {
-            view?.reloadItems(indexes)
+            indexes.forEach {
+                viewItems[it] = itemForIndex(it)
+            }
+
+            view?.setItems(viewItemsCopy)
         }
     }
 
     override fun onUpdateBaseCurrency() {
         metadataDataSource.clearRates()
-        view?.reload()
+
+        viewItems = MutableList(itemsCount) { itemForIndex(it) }
+        view?.setItems(viewItemsCopy)
     }
 
     override fun didFetchRate(rateValue: BigDecimal, coin: Coin, currency: Currency, timestamp: Long) {
         metadataDataSource.setRate(rateValue, coin, currency, timestamp)
 
-        val itemIndexes = loader.itemIndexesForTimestamp(coin, timestamp)
-        if (itemIndexes.isNotEmpty()) {
-            view?.reloadItems(itemIndexes)
+        val indexes = loader.itemIndexesForTimestamp(coin, timestamp)
+        if (indexes.isNotEmpty()) {
+            indexes.forEach {
+                viewItems[it] = itemForIndex(it)
+            }
+
+            view?.setItems(viewItemsCopy)
         }
     }
 
@@ -127,7 +145,8 @@ class TransactionsPresenter(
     }
 
     override fun onConnectionRestore() {
-        view?.reload()
+        viewItems = MutableList(itemsCount) { itemForIndex(it) }
+        view?.setItems(viewItemsCopy)
     }
 
     //
@@ -135,15 +154,22 @@ class TransactionsPresenter(
     //
 
     override fun onChange(diff: DiffUtil.DiffResult) {
-        view?.reloadChange(diff)
+        viewItems = MutableList(itemsCount) { itemForIndex(it) }
+        view?.setItems(viewItemsCopy)
     }
 
     override fun didChangeData() {
-        view?.reload()
+        viewItems = MutableList(itemsCount) { itemForIndex(it) }
+        view?.setItems(viewItemsCopy)
     }
 
     override fun didInsertData(fromIndex: Int, count: Int) {
-        view?.addItems(fromIndex, count)
+        val toInsert = List(count) {
+            itemForIndex(fromIndex + it)
+        }
+        viewItems.addAll(toInsert)
+
+        view?.setItems(viewItemsCopy)
     }
 
     override fun fetchRecords(fetchDataList: List<TransactionsModule.FetchData>) {

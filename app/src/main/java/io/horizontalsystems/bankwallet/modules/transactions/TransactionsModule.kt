@@ -23,7 +23,19 @@ data class TransactionViewItem(
         val date: Date?,
         val status: TransactionStatus,
         val rate: CurrencyValue?,
-        val lockInfo: TransactionLockInfo?)
+        val lockInfo: TransactionLockInfo?) {
+
+    fun itemTheSame(other: TransactionViewItem): Boolean {
+        return wallet == other.wallet && transactionHash == other.transactionHash
+    }
+
+    fun contentTheSame(other: TransactionViewItem): Boolean {
+        return currencyValue == other.currencyValue
+                && date == other.date
+                && status == other.status
+                && rate == other.rate
+    }
+}
 
 
 data class TransactionLockInfo(val lockedUntil: Date, val originalAddress: String, val amount: BigDecimal?)
@@ -45,6 +57,7 @@ object TransactionsModule {
         fun reloadChange(diff: DiffUtil.DiffResult)
         fun reloadItems(updatedIndexes: List<Int>)
         fun addItems(fromIndex: Int, count: Int)
+        fun setItems(items: List<TransactionViewItem>)
     }
 
     interface IViewDelegate {
