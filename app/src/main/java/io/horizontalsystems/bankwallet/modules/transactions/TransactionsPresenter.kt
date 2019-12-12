@@ -6,6 +6,7 @@ import io.horizontalsystems.bankwallet.entities.Currency
 import io.horizontalsystems.bankwallet.entities.TransactionRecord
 import io.horizontalsystems.bankwallet.entities.Wallet
 import java.math.BigDecimal
+import java.util.concurrent.atomic.AtomicBoolean
 
 class TransactionsPresenter(
         private val interactor: TransactionsModule.IInteractor,
@@ -17,6 +18,7 @@ class TransactionsPresenter(
 
     var view: TransactionsModule.IView? = null
 
+    private var loading: AtomicBoolean = AtomicBoolean(false)
     private var viewItems = mutableListOf<TransactionViewItem>()
     private val viewItemsCopy: List<TransactionViewItem>
         get() = viewItems.map { it.copy() }
@@ -97,47 +99,31 @@ class TransactionsPresenter(
     override fun didFetchRecords(records: Map<Wallet, List<TransactionRecord>>) {
         dataSource.handleNextRecords(records)
 
-        moveToNextPage()
-    }
-
-    private fun moveToNextPage() {
         val currentItemsCount = dataSource.itemsCount
         val insertedCount = dataSource.increasePage()
         if (insertedCount > 0) {
-            didInsertData(currentItemsCount, insertedCount)
+            val toInsert = List(insertedCount) {
+                itemForIndex(currentItemsCount + it)
+            }
+            viewItems.addAll(toInsert)
+            view?.setItems(viewItemsCopy)
         }
-        loading = false
+        loading.set(false)
     }
-
-    private fun didInsertData(fromIndex: Int, count: Int) {
-        val toInsert = List(count) {
-            itemForIndex(fromIndex + it)
-        }
-        viewItems.addAll(toInsert)
-
-        view?.setItems(viewItemsCopy)
-    }
-
 
     override fun onUpdateLastBlockHeight(wallet: Wallet, lastBlockHeight: Int) {
-        val oldBlockHeight = metadataDataSource.getLastBlockHeight(wallet)
-        val threshold = metadataDataSource.getConfirmationThreshold(wallet)
-
         metadataDataSource.setLastBlockHeight(lastBlockHeight, wallet)
+
+        val oldBlockHeight = metadataDataSource.getLastBlockHeight(wallet)
 
         if (oldBlockHeight == null) {
             resetViewItems()
-            return
+        } else {
+            val threshold = metadataDataSource.getConfirmationThreshold(wallet)
+
+            resetViewItemsByIndexes(dataSource.itemIndexesForPending(wallet, oldBlockHeight - threshold))
         }
 
-        val indexes = dataSource.itemIndexesForPending(wallet, oldBlockHeight - threshold)
-        if (indexes.isNotEmpty()) {
-            indexes.forEach {
-                viewItems[it] = itemForIndex(it)
-            }
-
-            view?.setItems(viewItemsCopy)
-        }
     }
 
     override fun onUpdateBaseCurrency() {
@@ -149,14 +135,7 @@ class TransactionsPresenter(
     override fun didFetchRate(rateValue: BigDecimal, coin: Coin, currency: Currency, timestamp: Long) {
         metadataDataSource.setRate(rateValue, coin, currency, timestamp)
 
-        val indexes = dataSource.itemIndexesForTimestamp(coin, timestamp)
-        if (indexes.isNotEmpty()) {
-            indexes.forEach {
-                viewItems[it] = itemForIndex(it)
-            }
-
-            view?.setItems(viewItemsCopy)
-        }
+        resetViewItemsByIndexes(dataSource.itemIndexesForTimestamp(coin, timestamp))
     }
 
     override fun didUpdateRecords(records: List<TransactionRecord>, wallet: Wallet) {
@@ -174,11 +153,19 @@ class TransactionsPresenter(
         view?.setItems(viewItemsCopy)
     }
 
-    private var loading: Boolean = false
+    private fun resetViewItemsByIndexes(indexes: List<Int>) {
+        if (indexes.isEmpty()) return
+
+        indexes.forEach {
+            viewItems[it] = itemForIndex(it)
+        }
+
+        view?.setItems(viewItemsCopy)
+    }
 
     private fun loadNextPage() {
-        if (loading || dataSource.allShown) return
-        loading = true
+        if (loading.get() || dataSource.allShown) return
+        loading.set(true)
 
         interactor.fetchRecords(dataSource.getFetchDataList())
     }
