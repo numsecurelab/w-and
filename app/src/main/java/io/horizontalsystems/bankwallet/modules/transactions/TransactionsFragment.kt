@@ -124,13 +124,13 @@ class TransactionsAdapter(private var listener: Listener) : Adapter<ViewHolder>(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        if (position > itemCount - 9) {
+        if (holder !is ViewHolderTransaction) return
+
+        if (position >= items.size - 9) {
             viewModel.delegate.onBottomReached()
         }
 
-        if (holder is ViewHolderTransaction) {
-            holder.bind(items[position], showBottomShade = (position == itemCount - 1))
-        }
+        holder.bind(items[position], showBottomShade = (position == itemCount - 1))
     }
 
     override fun onClick(position: Int) {
