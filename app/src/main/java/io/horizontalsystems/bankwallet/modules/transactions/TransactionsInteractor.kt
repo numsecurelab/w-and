@@ -58,9 +58,9 @@ class TransactionsInteractor(
                 .let { disposables.add(it) }
     }
 
-    override fun fetchRecords(fetchDataList: List<TransactionsModule.FetchData>) {
+    override fun fetchRecords(fetchDataList: List<TransactionsModule.FetchData>, initial: Boolean) {
         if (fetchDataList.isEmpty()) {
-            delegate?.didFetchRecords(mapOf())
+            delegate?.didFetchRecords(mapOf(), initial)
             return
         }
 
@@ -86,7 +86,7 @@ class TransactionsInteractor(
                 .subscribeOn(Schedulers.io())
                 .observeOn(Schedulers.io())
                 .subscribe { records, t2 ->
-                    delegate?.didFetchRecords(records)
+                    delegate?.didFetchRecords(records, initial)
                 }
                 .let { disposables.add(it) }
     }

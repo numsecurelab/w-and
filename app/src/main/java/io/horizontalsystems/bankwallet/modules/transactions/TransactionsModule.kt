@@ -70,7 +70,7 @@ object TransactionsModule {
     interface IInteractor {
         fun initialFetch()
         fun clear()
-        fun fetchRecords(fetchDataList: List<FetchData>)
+        fun fetchRecords(fetchDataList: List<FetchData>, initial: Boolean)
         fun setSelectedWallets(selectedWallets: List<Wallet>)
         fun fetchLastBlockHeights()
         fun fetchRate(coin: Coin, timestamp: Long)
@@ -79,7 +79,7 @@ object TransactionsModule {
     interface IInteractorDelegate {
         fun onUpdateWalletsData(allWalletsData: List<Triple<Wallet, Int, Int?>>)
         fun onUpdateSelectedWallets(selectedWallets: List<Wallet>)
-        fun didFetchRecords(records: Map<Wallet, List<TransactionRecord>>)
+        fun didFetchRecords(records: Map<Wallet, List<TransactionRecord>>, initial: Boolean)
         fun onUpdateLastBlockHeight(wallet: Wallet, lastBlockHeight: Int)
         fun onUpdateBaseCurrency()
         fun didFetchRate(rateValue: BigDecimal, coin: Coin, currency: Currency, timestamp: Long)

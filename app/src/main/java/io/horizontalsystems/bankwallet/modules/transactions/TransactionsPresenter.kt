@@ -61,7 +61,7 @@ class TransactionsPresenter(
     }
 
     override fun onBottomReached() {
-        loadNextPage()
+        loadNextPage(false)
     }
 
     override fun onUpdateWalletsData(allWalletsData: List<Triple<Wallet, Int, Int?>>) {
@@ -84,19 +84,17 @@ class TransactionsPresenter(
         view?.showFilters(filters)
 
         dataSource.handleUpdatedWallets(wallets)
-
-        resetViewItems()
-        loadNextPage()
+        viewItems.clear()
+        loadNextPage(true)
     }
 
     override fun onUpdateSelectedWallets(selectedWallets: List<Wallet>) {
         dataSource.setWallets(selectedWallets)
-
-        resetViewItems()
-        loadNextPage()
+        viewItems.clear()
+        loadNextPage(true)
     }
 
-    override fun didFetchRecords(records: Map<Wallet, List<TransactionRecord>>) {
+    override fun didFetchRecords(records: Map<Wallet, List<TransactionRecord>>, initial: Boolean) {
         dataSource.handleNextRecords(records)
 
         val currentItemsCount = dataSource.itemsCount
@@ -107,6 +105,8 @@ class TransactionsPresenter(
             }
             viewItems.addAll(toInsert)
             view?.setItems(viewItemsCopy)
+        } else if (initial) {
+            view?.setItems(listOf())
         }
         loading.set(false)
     }
@@ -163,10 +163,14 @@ class TransactionsPresenter(
         view?.setItems(viewItemsCopy)
     }
 
-    private fun loadNextPage() {
+    private fun loadNextPage(initial: Boolean) {
+        if (initial && dataSource.allShown) {
+            view?.setItems(listOf())
+        }
+
         if (loading.get() || dataSource.allShown) return
         loading.set(true)
 
-        interactor.fetchRecords(dataSource.getFetchDataList())
+        interactor.fetchRecords(dataSource.getFetchDataList(), initial)
     }
 }
