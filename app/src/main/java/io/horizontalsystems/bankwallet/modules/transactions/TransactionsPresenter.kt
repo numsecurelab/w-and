@@ -115,9 +115,9 @@ class TransactionsPresenter(
 
     override fun onUpdateLastBlockHeight(wallet: Wallet, lastBlockHeight: Int) {
         executor.submit {
-            metadataDataSource.setLastBlockHeight(lastBlockHeight, wallet)
-
             val oldBlockHeight = metadataDataSource.getLastBlockHeight(wallet)
+
+            metadataDataSource.setLastBlockHeight(lastBlockHeight, wallet)
 
             if (oldBlockHeight == null) {
                 resetViewItems()
