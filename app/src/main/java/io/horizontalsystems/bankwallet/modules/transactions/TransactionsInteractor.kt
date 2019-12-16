@@ -3,6 +3,7 @@ package io.horizontalsystems.bankwallet.modules.transactions
 import io.horizontalsystems.bankwallet.core.*
 import io.horizontalsystems.bankwallet.core.managers.ConnectivityManager
 import io.horizontalsystems.bankwallet.entities.Coin
+import io.horizontalsystems.bankwallet.entities.CurrencyValue
 import io.horizontalsystems.bankwallet.entities.TransactionRecord
 import io.horizontalsystems.bankwallet.entities.Wallet
 import io.reactivex.Single
@@ -110,7 +111,14 @@ class TransactionsInteractor(
         }
     }
 
-    override fun fetchRate(coin: Coin, timestamp: Long) {
+    override fun getRate(coin: Coin, timestamp: Long): CurrencyValue? {
+        val baseCurrency = currencyManager.baseCurrency
+        return rateManager.historicalRate(coin.code, baseCurrency.code, timestamp)?.let {
+            CurrencyValue(baseCurrency, it)
+        }
+    }
+
+    override fun getRateFromApi(coin: Coin, timestamp: Long) {
         val baseCurrency = currencyManager.baseCurrency
         val currencyCode = baseCurrency.code
         val composedKey = coin.code + timestamp
@@ -119,7 +127,7 @@ class TransactionsInteractor(
 
         requestedTimestamps[composedKey] = timestamp
 
-        rateManager.historicalRate(coin.code, currencyCode, timestamp)
+        rateManager.historicalRateFromApi(coin.code, currencyCode, timestamp)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe({

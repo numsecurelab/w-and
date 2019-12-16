@@ -62,7 +62,6 @@ object TransactionsModule {
         fun onClear()
 
         val itemsCount: Int
-        fun itemForIndex(index: Int): TransactionViewItem
         fun onBottomReached()
         fun onVisible()
     }
@@ -73,7 +72,8 @@ object TransactionsModule {
         fun fetchRecords(fetchDataList: List<FetchData>, initial: Boolean)
         fun setSelectedWallets(selectedWallets: List<Wallet>)
         fun fetchLastBlockHeights()
-        fun fetchRate(coin: Coin, timestamp: Long)
+        fun getRate(coin: Coin, timestamp: Long) : CurrencyValue?
+        fun getRateFromApi(coin: Coin, timestamp: Long)
     }
 
     interface IInteractorDelegate {

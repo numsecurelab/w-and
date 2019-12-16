@@ -366,7 +366,8 @@ interface IRateManager {
     fun getLatestRate(coinCode: String, currencyCode: String): BigDecimal?
     fun marketInfoObservable(coinCode: String, currencyCode: String): Observable<MarketInfo>
     fun marketInfoObservable(currencyCode: String): Observable<Map<String, MarketInfo>>
-    fun historicalRate(coinCode: String, currencyCode: String, timestamp: Long): Single<BigDecimal>
+    fun historicalRate(coinCode: String, currencyCode: String, timestamp: Long): BigDecimal?
+    fun historicalRateFromApi(coinCode: String, currencyCode: String, timestamp: Long): Single<BigDecimal>
     fun chartInfo(coinCode: String, currencyCode: String, chartType: ChartType): ChartInfo?
     fun chartInfoObservable(coinCode: String, currencyCode: String, chartType: ChartType): Observable<ChartInfo>
     fun refresh()
