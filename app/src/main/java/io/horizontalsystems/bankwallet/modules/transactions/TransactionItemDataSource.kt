@@ -47,10 +47,12 @@ class TransactionItemDataSource {
     }
 
     fun handleModifiedItems(updatedItems: List<TransactionItem>, insertedItems: List<TransactionItem>) {
-        items.removeAll(updatedItems)
-        items.addAll(updatedItems)
-        items.addAll(insertedItems)
-        items.sortDescending()
+        val tmp = items.toMutableSet()
+        tmp.addAll(updatedItems)
+        tmp.addAll(insertedItems)
+
+        items.clear()
+        items.addAll(tmp.sortedDescending())
     }
 
     fun shouldInsertRecord(record: TransactionRecord): Boolean {
