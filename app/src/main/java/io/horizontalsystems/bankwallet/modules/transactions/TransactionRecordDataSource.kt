@@ -15,9 +15,6 @@ class TransactionRecordDataSource(
     val itemsCount
         get() = itemsDataSource.count
 
-    val allShown
-        get() = poolRepo.activePools.all { it.allShown }
-
     fun itemForIndex(index: Int): TransactionItem =
             itemsDataSource.itemForIndex(index)
 

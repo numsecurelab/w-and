@@ -42,9 +42,6 @@ class Pool(val state: State) {
 
     }
 
-    val allShown: Boolean
-        get() = state.allLoaded && state.unusedRecords.isEmpty()
-
     val unusedRecords: List<TransactionRecord>
         get() = state.unusedRecords
 

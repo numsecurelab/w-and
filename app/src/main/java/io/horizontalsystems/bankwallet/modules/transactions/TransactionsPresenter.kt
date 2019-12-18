@@ -185,11 +185,7 @@ class TransactionsPresenter(
     }
 
     private fun loadNextPage(initial: Boolean) {
-        if (initial && dataSource.allShown) {
-            view?.setItems(listOf())
-        }
-
-        if (loading.get() || dataSource.allShown) return
+        if (loading.get()) return
         loading.set(true)
 
         interactor.fetchRecords(dataSource.getFetchDataList(), initial)
