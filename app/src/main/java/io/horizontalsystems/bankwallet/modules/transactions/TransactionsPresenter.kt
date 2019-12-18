@@ -42,6 +42,16 @@ class TransactionsPresenter(
         router.openTransactionInfo(transaction)
     }
 
+    override fun onBindTransactionItem(transaction: TransactionViewItem) {
+        executor.submit {
+            if (transaction.rate == null) {
+                transaction.date?.let {
+                    interactor.getRateFromApi(transaction.wallet.coin, it.time / 1000)
+                }
+            }
+        }
+    }
+
     override fun onFilterSelect(wallet: Wallet?) {
         interactor.setSelectedWallets(wallet?.let { listOf(wallet) } ?: listOf())
     }
@@ -161,10 +171,6 @@ class TransactionsPresenter(
         val lastBlockHeight = metadataDataSource.getLastBlockHeight(wallet)
         val threshold = metadataDataSource.getConfirmationThreshold(wallet)
         val rate = interactor.getRate(wallet.coin, transactionItem.record.timestamp)
-
-        if (rate == null) {
-            interactor.getRateFromApi(wallet.coin, transactionItem.record.timestamp)
-        }
 
         return factory.item(wallet, transactionItem, lastBlockHeight, threshold, rate)
     }

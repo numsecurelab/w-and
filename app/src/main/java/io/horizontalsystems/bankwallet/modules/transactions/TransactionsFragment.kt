@@ -130,7 +130,11 @@ class TransactionsAdapter(private var listener: Listener) : Adapter<ViewHolder>(
             viewModel.delegate.onBottomReached()
         }
 
-        holder.bind(items[position], showBottomShade = (position == itemCount - 1))
+        val transactionViewItem = items[position]
+
+        holder.bind(transactionViewItem, showBottomShade = (position == itemCount - 1))
+
+        viewModel.delegate.onBindTransactionItem(transactionViewItem)
     }
 
     override fun onClick(position: Int) {

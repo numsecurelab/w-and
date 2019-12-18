@@ -58,6 +58,7 @@ object TransactionsModule {
     interface IViewDelegate {
         fun viewDidLoad()
         fun onTransactionItemClick(transaction: TransactionViewItem)
+        fun onBindTransactionItem(transaction: TransactionViewItem)
         fun onFilterSelect(wallet: Wallet?)
         fun onClear()
 
