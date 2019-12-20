@@ -53,7 +53,9 @@ class TransactionsPresenter(
     }
 
     override fun onFilterSelect(wallet: Wallet?) {
-        interactor.setSelectedWallets(wallet?.let { listOf(wallet) } ?: listOf())
+        executor.submit {
+            interactor.setSelectedWallets(wallet?.let { listOf(wallet) } ?: listOf())
+        }
     }
 
     override fun onClear() {
@@ -71,98 +73,82 @@ class TransactionsPresenter(
     }
 
     override fun onUpdateWalletsData(allWalletsData: List<Triple<Wallet, Int, Int?>>) {
-        executor.submit {
-            val wallets = allWalletsData.map { it.first }
+        val wallets = allWalletsData.map { it.first }
 
-            allWalletsData.forEach { (wallet, confirmationThreshold, lastBlockHeight) ->
-                metadataDataSource.setConfirmationThreshold(confirmationThreshold, wallet)
-                lastBlockHeight?.let {
-                    metadataDataSource.setLastBlockHeight(it, wallet)
-                }
+        allWalletsData.forEach { (wallet, confirmationThreshold, lastBlockHeight) ->
+            metadataDataSource.setConfirmationThreshold(confirmationThreshold, wallet)
+            lastBlockHeight?.let {
+                metadataDataSource.setLastBlockHeight(it, wallet)
             }
-
-            interactor.fetchLastBlockHeights()
-
-            val filters = when {
-                wallets.size < 2 -> listOf()
-                else -> listOf(null).plus(wallets)
-            }
-
-            view?.showFilters(filters)
-
-            dataSource.handleUpdatedWallets(wallets)
-            viewItems.clear()
-            loadNextPage(true)
         }
+
+        interactor.fetchLastBlockHeights()
+
+        val filters = when {
+            wallets.size < 2 -> listOf()
+            else -> listOf(null).plus(wallets)
+        }
+
+        view?.showFilters(filters)
+
+        dataSource.handleUpdatedWallets(wallets)
+        viewItems.clear()
+        loadNextPage(true)
     }
 
     override fun onUpdateSelectedWallets(selectedWallets: List<Wallet>) {
-        executor.submit {
-            dataSource.setWallets(selectedWallets)
-            viewItems.clear()
-            loadNextPage(true)
-        }
+        dataSource.setWallets(selectedWallets)
+        viewItems.clear()
+        loadNextPage(true)
     }
 
     override fun didFetchRecords(records: Map<Wallet, List<TransactionRecord>>, initial: Boolean) {
-        executor.submit {
-            dataSource.handleNextRecords(records)
+        dataSource.handleNextRecords(records)
 
-            val currentItemsCount = dataSource.itemsCount
-            val insertedCount = dataSource.increasePage()
-            if (insertedCount > 0) {
-                val toInsert = List(insertedCount) {
-                    viewItemForIndex(currentItemsCount + it)
-                }
-                viewItems.addAll(toInsert)
-                view?.setItems(viewItemsCopy)
-            } else if (initial) {
-                view?.setItems(listOf())
+        val currentItemsCount = dataSource.itemsCount
+        val insertedCount = dataSource.increasePage()
+        if (insertedCount > 0) {
+            val toInsert = List(insertedCount) {
+                viewItemForIndex(currentItemsCount + it)
             }
-            loading.set(false)
+            viewItems.addAll(toInsert)
+            view?.setItems(viewItemsCopy)
+        } else if (initial) {
+            view?.setItems(listOf())
         }
+        loading.set(false)
     }
 
     override fun onUpdateLastBlockHeight(wallet: Wallet, lastBlockHeight: Int) {
-        executor.submit {
-            val oldBlockHeight = metadataDataSource.getLastBlockHeight(wallet)
+        val oldBlockHeight = metadataDataSource.getLastBlockHeight(wallet)
 
-            metadataDataSource.setLastBlockHeight(lastBlockHeight, wallet)
+        metadataDataSource.setLastBlockHeight(lastBlockHeight, wallet)
 
-            if (oldBlockHeight == null) {
-                resetViewItems()
-            } else {
-                val threshold = metadataDataSource.getConfirmationThreshold(wallet)
+        if (oldBlockHeight == null) {
+            resetViewItems()
+        } else {
+            val threshold = metadataDataSource.getConfirmationThreshold(wallet)
 
-                resetViewItemsByIndexes(dataSource.itemIndexesForPending(wallet, oldBlockHeight - threshold))
-            }
+            resetViewItemsByIndexes(dataSource.itemIndexesForPending(wallet, oldBlockHeight - threshold))
         }
     }
 
     override fun onUpdateBaseCurrency() {
-        executor.submit {
-            resetViewItems()
-        }
+        resetViewItems()
     }
 
     override fun didFetchRate(rateValue: BigDecimal, coin: Coin, currency: Currency, timestamp: Long) {
-        executor.submit {
-            resetViewItemsByIndexes(dataSource.itemIndexesForTimestamp(coin, timestamp))
-        }
+        resetViewItemsByIndexes(dataSource.itemIndexesForTimestamp(coin, timestamp))
     }
 
     override fun didUpdateRecords(records: List<TransactionRecord>, wallet: Wallet) {
-        executor.submit {
-            if (dataSource.handleUpdatedRecords(records, wallet)) {
-                resetViewItems()
-            }
+        if (dataSource.handleUpdatedRecords(records, wallet)) {
+            resetViewItems()
         }
     }
 
     override fun onConnectionRestore() {
-        executor.submit {
-            resetViewItems()
-        }
+        resetViewItems()
     }
 
     private fun viewItemForIndex(index: Int): TransactionViewItem {
